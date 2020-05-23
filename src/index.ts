@@ -2,11 +2,9 @@ import { Console } from 'console';
 import fs from 'fs';
 import path from 'path';
 
-
 import { Generate } from './generate';
 
 const terminalConsole = new Console(process.stdout, process.stderr);
-
 
 /**
  * Get all files in folder, recursively.
@@ -80,11 +78,7 @@ export function generate(
         testsExtension,
         baseLocation,
     );
-    if (outputType === 'pdf') {
-        generateClass.pdf();
-    } else if (outputType === 'html') {
-        generateClass.html();
-    } else if (outputType === 'gitbook') {
+    if (outputType === 'gitbook') {
         generateClass.gitbook();
     } else if (outputType === 'docsify') {
         generateClass.docsify();

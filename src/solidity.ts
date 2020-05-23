@@ -79,9 +79,10 @@ export function parseSingleSolidityFile(
     testComments: Map<string, IMethodTestComment[]>,
     baseLocation: string
 ): IObjectViewData {
+    console.log(`PATH: ${solidityFilePath}`)
     const folder = path.join(__dirname, '../');
     const input = fs.readFileSync(solidityFilePath).toString();
-    const ast = parser.parse(input);
+    const ast = parser.parse(input, { loc: true });
     let data: ISolDocAST = {
         events: [] as any,
         functions: [] as any,

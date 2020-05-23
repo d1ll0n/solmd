@@ -4,8 +4,6 @@ import path from 'path';
 import dirTree from 'directory-tree';
 
 import { DirectoryTree } from 'directory-tree';
-import { emojify } from 'node-emoji';
-import toPdf from 'pdf-from-html';
 import {
     IObjectViewData, parseSingleSolidityFile,
 } from './solidity';
@@ -14,7 +12,7 @@ import { getLanguage, highlight } from 'highlight.js';
 import mdemoji from 'markdown-it-emoji';
 import { render } from 'mustache';
 import { parseTestsComments } from './tests';
-
+import { splitByHeader, SplitResult } from './markdown';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const md = require('markdown-it')({
     highlight(str: string, lang: string) {
@@ -35,15 +33,12 @@ const md = require('markdown-it')({
 md.use(mdemoji);
 md.renderer.rules.emoji = (token: [{ markup: string }], idx: number): string => `<i class="twa twa-${token[idx].markup}"></i>`;
 
-
-
 /**
  * TODO: to write!
  */
 export class Generate {
     private lineBreak = '\r\n';
     private htmlDefaultTemplatePath = 'dist/template/html/index.html';
-    private pdfDefaultTemplatePath = 'dist/template/pdf/index.html';
     private docsifyDefaultHTMLTemplatePath = 'template/docsify/index.html';
     private contracts: IObjectViewData[] = [];
     private inputPathStructure: DirectoryTree;
@@ -67,6 +62,12 @@ export class Generate {
         this.outputPath = outputPath;
         this.inputPathStructure = dirTree(inputPath, { exclude: exclude.map((i) => new RegExp(i)) });
         this.hasLICENSE = fs.existsSync(path.join(process.cwd(), 'LICENSE'));
+    }
+
+    private getLink(_path: string, line?: number): string {
+        if (_path.startsWith('.')) _path = _path.slice(1);
+        const url = line ? `${_path}#L${line}` : _path;
+        return `[🔗](${url})`
     }
 
     /**
@@ -115,108 +116,93 @@ export class Generate {
         );
     }
 
-    /**
-     * TODO: to write!
-     */
-    public html(): number {
-        this.contracts.forEach((contract) => {
-            let HTMLContent = this.mustacheRender(
-                path.join(contract.folder, this.htmlDefaultTemplatePath),
-                contract,
-            );
-            HTMLContent = this.fixUrls(HTMLContent);
-            fs.writeFileSync(
-                path.join(process.cwd(), this.outputPath, `${contract.filename}.html`),
-                this.applyEmojify(HTMLContent),
-            );
-        });
-        this.renderReadme(false);
-        // if there's a LICENSE
-        if (this.hasLICENSE) {
-            const templateContent = String(fs.readFileSync(
-                path.join(this.contracts[0].folder, this.htmlDefaultTemplatePath),
-            ));
-            const LICENSEText = String(fs.readFileSync(path.join(process.cwd(), 'LICENSE'))).trim();
-            const LICENSE = LICENSEText.replace(/\n/g, '<br>');
-            const projectName = JSON.parse(String(fs.readFileSync(path.join(process.cwd(), 'package.json')))).name as string;
-            const view = {
-                LICENSE,
-                contractsStructure: this.contracts,
-                folderStructure: JSON.stringify(this.inputPathStructure),
-                hasLICENSE: true,
-                projectName,
-            };
-            const outputLicense = render(templateContent, view);
-            fs.writeFileSync(
-                path.join(process.cwd(), this.outputPath, 'license.html'),
-                outputLicense,
-            );
+    private fixNatSpec(str: string): string {
+        const lines = str.split('\n');
+        for (let i = 0; i < lines.length; i++) {
+            let line = lines[i];
+            if (line.startsWith('* ')) {
+                lines[i] = `${this.lineBreak.repeat(2)}${line.slice(2)}`;
+            }
+            line = lines[i];
+            if (line.endsWith('.') || line.endsWith(':')) {
+                lines[i] = `${line.trimEnd()}${this.lineBreak.repeat(2)}`;
+            }
+            line = lines[i]
+            if (i > 0 && !(lines[i-1].endsWith(this.lineBreak))) {
+                if (line.startsWith('-')) {
+                    lines[i] = `${this.lineBreak}${line.trimStart()}`;
+                } else {
+                    lines[i] = ` ${line}`;
+                }
+            }
         }
-        return 0;
+        return lines.join('');
     }
 
-    /**
-     * TODO: to write!
-     */
-    public async pdf(): Promise<void> {
-        const totalContracts = this.contracts.length;
-        for (let c = 0; c < totalContracts; c += 1) {
-            let HTMLContent = this.mustacheRender(
-                path.join(this.contracts[c].folder, this.pdfDefaultTemplatePath),
-                this.contracts[c],
-            );
-            HTMLContent = this.fixUrls(HTMLContent);
-            await toPdf.generatePDF(
-                this.outputPath,
-                this.contracts[c].filename,
-                this.applyEmojify(HTMLContent),
-            );
-        }
-    }
-
-    /**
-     * TODO: to write!
-     */
     private renderContracts(): void {
         this.contracts.forEach((contract) => {
             // transform the template
-            let MDContent = `# ${contract.name}${this.lineBreak}`;
+            const potentialMdPath = contract.path.replace('.sol', '.md');
+            let mdData: SplitResult[] | undefined;
+            let mdBody: string | undefined;
+            if (fs.existsSync(potentialMdPath)) {
+                const mdFile = fs.readFileSync(potentialMdPath, 'utf8');
+                mdData = splitByHeader(mdFile, 1);
+                for (const block of mdData) {
+                    if (block.title.includes(`# ${contract.name}`)) {
+                        mdData = block.children;
+                        mdBody = block.body;
+                    }
+                }
+            }
+            const contractLink = this.getLink(contract.path, contract.data.contract.loc.start.line);
+            let MDContent = `# ${contract.name} ${contractLink}${this.lineBreak}`;
+            if (mdBody) MDContent += `${mdBody.trim()}${this.lineBreak.repeat(2)}`;
             if (contract.data.contract !== undefined) {
                 if (contract.data.contract.natspec.dev) {
-                    MDContent += `*${contract.data.contract.natspec.dev}*${this.lineBreak}`;
+                    MDContent += `${this.fixNatSpec(contract.data.contract.natspec.dev)}${this.lineBreak.repeat(2)}`;
                 }
                 if (contract.data.contract.natspec.notice) {
-                    MDContent += `${contract.data.contract.natspec.notice}${this.lineBreak}`;
+                    MDContent += `${this.fixNatSpec(contract.data.contract.natspec.notice)}${this.lineBreak}`;
                 }
             }
             contract.data.functions.forEach((f) => {
-                MDContent += `## ${f.ast.name}${this.lineBreak}${this.lineBreak}`;
+                const { start: { line }} = f.ast.loc;
+                const fnLink = this.getLink(contract.path, line);
+                const fnName = `\`${f.ast.name}(${f.parameters.map((p: any) => `${p.typeName.name} ${p.name}`).join(', ')})\``
+                MDContent += `## ${fnName} ${fnLink}${this.lineBreak.repeat(2)}`;
+                const existingMD = mdData?.filter(
+                    (m) => m.title.includes(fnName) || m.title == `## ${f.ast.name}`
+                )[0];
+                if (existingMD) MDContent += `${existingMD.body.trim()}${this.lineBreak.repeat(2)}`;
                 if (f.ast.natspec === null) {
                     return;
                 }
                 if (f.ast.natspec.dev) {
-                    MDContent += `*${f.ast.natspec.dev}*${this.lineBreak}${this.lineBreak}`;
+                    if (existingMD) {
+                        MDContent += `### Developer Notes${this.lineBreak.repeat(2)}`
+                    }
+                    MDContent += `${this.fixNatSpec(f.ast.natspec.dev)}${this.lineBreak.repeat(2)}`;
                 }
                 if (f.ast.natspec.notice) {
-                    MDContent += `${f.ast.natspec.notice}${this.lineBreak}${this.lineBreak}`;
+                    MDContent += `${this.fixNatSpec(f.ast.natspec.notice)}${this.lineBreak.repeat(2)}`;
                 }
-                let table = false;
                 if (f.parameters.length > 0) {
-                    table = true;
-                    MDContent += `${this.lineBreak}|Input/Output|Data Type|Variable Name|Comment|${this.lineBreak}`
-                        + `|----------|----------|----------|----------|${this.lineBreak}`;
+                    MDContent += `${this.lineBreak}### Parameters${this.lineBreak}`;
                     f.parameters.forEach((p: any) => {
-                        MDContent += `|input|${p.typeName.name}|${p.name}|${p.natspec}|${this.lineBreak}`;
+                        MDContent += `* \`${p.name}\` ${p.natspec}${this.lineBreak}`;
                     });
                 }
+                // if (f.parameters.length > 0) {
+                //     MDContent += `${this.lineBreak}### Parameters${this.lineBreak}`;
+                //     f.parameters.forEach((p: any) => {
+                //         MDContent += `* \`${p.typeName.name} ${p.name}\` ${p.natspec}${this.lineBreak}`;
+                //     });
+                // }
                 if (f.returnParameters !== null && f.returnParameters.length > 0) {
-                    if (!table) {
-                        MDContent += `${this.lineBreak}|Input/Output|Data Type|Variable Name|Comment|${this.lineBreak}`
-                            + `|----------|----------|----------|----------|${this.lineBreak}`;
-                    }
+                    MDContent += `### Returns${this.lineBreak}`;
                     f.returnParameters.forEach((p: any) => {
-                        MDContent += `|output|${p.typeName.name}|${(p.name === null) ? ('N/A') : (p.name)}|`
-                            + `${(p.natspec === undefined) ? ('N/A') : (p.natspec)}|${this.lineBreak}`;
+                        MDContent += `* \`${p.typeName.name}${p.name ? ` ${p.name}` : ''}\`${p.natspec ? ` ${p.natspec}` : ''}${this.lineBreak}`;
                     });
                 }
                 MDContent += this.lineBreak;
@@ -298,45 +284,4 @@ export class Generate {
         });
         return documentationIndexContent;
     }
-
-    /**
-     * Using the given parameters, calls the Mustache engine
-     * and renders the HTML page.
-     * @param {string} templateFilePath Path for template file
-     * @param {string} contract contract object
-     */
-    private mustacheRender(
-        templateFilePath: string,
-        contract: IObjectViewData,
-    ): string {
-        const templateContent = String(fs.readFileSync(templateFilePath));
-        const projectName = JSON.parse(String(fs.readFileSync(path.join(process.cwd(), 'package.json')))).name as string;
-        const view = {
-            contract,
-            contracts: this.contracts,
-            currentDate: new Date().getTime(),
-            folderStructure: JSON.stringify(this.inputPathStructure),
-            hasLICENSE: this.hasLICENSE,
-            projectName,
-        };
-        const output = render(templateContent, view);
-        return output;
-    }
-
-    private fixUrls(content: string): string {
-        const match = content.match(/(?<!\[)https?:&#x2F;&#x2F;[a-zA-Z0-9.&#x2F;\-_]+/g);
-        if (match !== null) {
-            let transform = match.map((url: string) => url.replace(/&#x2F;/g, '/'));
-            transform = transform.map((url: string) => `<a href="${url}">${url}</a>`);
-            for (let i = 0; i < match.length; i += 1) {
-                content = content.replace(match[i], transform[i]);
-            }
-        }
-        return content;
-    };
-
-    private applyEmojify(content: string): string {
-        const formatEmojify = (code: string, name: string): string => `<i alt="${code}" class="twa twa-${name}"></i>`;
-        return emojify(content, null as any, formatEmojify);
-    };
 }
