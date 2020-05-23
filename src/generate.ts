@@ -1,64 +1,34 @@
 import fs from 'fs';
 import path from 'path';
 
-import dirTree from 'directory-tree';
+import dirTree, { DirectoryTree } from 'directory-tree';
 
-import { DirectoryTree } from 'directory-tree';
 import {
     IObjectViewData, parseSingleSolidityFile,
 } from './solidity';
 
-import { getLanguage, highlight } from 'highlight.js';
-import mdemoji from 'markdown-it-emoji';
-import { render } from 'mustache';
-import { parseTestsComments } from './tests';
+// import { parseTestsComments } from './tests';
 import { splitByHeader, SplitResult } from './markdown';
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const md = require('markdown-it')({
-    highlight(str: string, lang: string) {
-        if (lang && getLanguage(lang)) {
-            try {
-                return `<pre class="hljs"><code>${
-                    highlight(lang, str, true).value}</code></pre>`;
-                // eslint-disable-next-line no-empty
-            } catch (__) { }
-        }
-        return `<pre class="hljs"><code>${md.utils.escapeHtml(str)}</code></pre>`;
-    },
-    html: true,
-    linkify: true,
-    typographer: true,
-});
-
-md.use(mdemoji);
-md.renderer.rules.emoji = (token: [{ markup: string }], idx: number): string => `<i class="twa twa-${token[idx].markup}"></i>`;
 
 /**
  * TODO: to write!
  */
 export class Generate {
     private lineBreak = '\r\n';
-    private htmlDefaultTemplatePath = 'dist/template/html/index.html';
-    private docsifyDefaultHTMLTemplatePath = 'template/docsify/index.html';
     private contracts: IObjectViewData[] = [];
     private inputPathStructure: DirectoryTree;
     private outputPath: string;
     private hasLICENSE: boolean;
+    private useFullFunctionSignature = true;
 
-    /**
-     * TODO: to write!
-     */
     public constructor(
         files: string[],
         exclude: string[],
         inputPath: string,
         outputPath: string,
-        testsPath: string,
-        testsExtension: string,
         baseLocation: string
     ) {
-        const testComments = parseTestsComments(testsPath, testsExtension);
-        files.forEach((file) => this.contracts.push(parseSingleSolidityFile(file, testComments, baseLocation)));
+        files.forEach((file) => this.contracts.push(parseSingleSolidityFile(file, baseLocation)));
         this.outputPath = outputPath;
         this.inputPathStructure = dirTree(inputPath, { exclude: exclude.map((i) => new RegExp(i)) });
         this.hasLICENSE = fs.existsSync(path.join(process.cwd(), 'LICENSE'));
@@ -70,9 +40,6 @@ export class Generate {
         return `[🔗](${url})`
     }
 
-    /**
-     * TODO: to write!
-     */
     public gitbook(): void {
         this.renderContracts();
         // generate summary file (essential in gitbook)
@@ -84,35 +51,6 @@ export class Generate {
         fs.writeFileSync(
             path.join(process.cwd(), this.outputPath, 'SUMMARY.md'),
             SUMMARYContent,
-        );
-        this.renderReadme(true);
-    }
-
-    /**
-     * TODO: to write!
-     */
-    public docsify(): void {
-        this.renderContracts();
-        // generate _sidebar file (essential in docsify, to have a custom sidebar)
-        let SIDEBARContent = `* WELCOME${this.lineBreak}\t* [Home](/)${this.lineBreak}`;
-        SIDEBARContent = this.renderDocumentationIndex(
-            SIDEBARContent,
-        );
-        // create _sidebar file
-        fs.writeFileSync(
-            path.join(process.cwd(), this.outputPath, '_sidebar.md'),
-            SIDEBARContent,
-        );
-        this.renderReadme(true);
-        // copy html base
-        fs.copyFileSync(
-            path.join(__dirname, this.docsifyDefaultHTMLTemplatePath),
-            path.join(process.cwd(), this.outputPath, 'index.html'),
-        );
-        // write nojekill
-        fs.writeFileSync(
-            path.join(process.cwd(), this.outputPath, '.nojekill'),
-            ' ',
         );
     }
 
@@ -139,25 +77,61 @@ export class Generate {
         return lines.join('');
     }
 
+
+    private getMarkDown(filePath: string, contractName: string): SplitResult[] {
+        let fP = filePath.replace('.sol', '.md');
+        if (!fs.existsSync(fP)) fP = filePath.replace(`${contractName}.sol`, 'README.md');
+        if (fs.existsSync(fP)) {
+            const file = fs.readFileSync(fP, 'utf8');
+            return splitByHeader(file, 1);
+        }
+        return [];
+    }
+
+    private functionName = (f: any): string => {
+        if (this.useFullFunctionSignature) {
+            // const _returns = f.returnParameters?.map((r: any) => r.typeName.name);
+            return [
+                '`',
+                f.ast.name,
+                '(',
+                f.parameters.map(
+                    (p: any) => `${p.typeName.name} ${p.name}`
+                ).join(', '),
+                ')',
+                // (_returns ? ` -> (${_returns.join(', ')})` : ''),
+                '`'
+            ].join('');
+        }
+        return f.ast.name;
+    }
+
+    private parameter = (p: any): string => {
+        if (this.useFullFunctionSignature) {
+            return `* \`${p.name}\` ${p.natspec}${this.lineBreak}`;
+        }
+        return `* \`${p.typeName.name} ${p.name}\` ${p.natspec}${this.lineBreak}`;
+    }
+
     private renderContracts(): void {
         this.contracts.forEach((contract) => {
             // transform the template
-            const potentialMdPath = contract.path.replace('.sol', '.md');
-            let mdData: SplitResult[] | undefined;
-            let mdBody: string | undefined;
-            if (fs.existsSync(potentialMdPath)) {
-                const mdFile = fs.readFileSync(potentialMdPath, 'utf8');
-                mdData = splitByHeader(mdFile, 1);
-                for (const block of mdData) {
-                    if (block.title.includes(`# ${contract.name}`)) {
-                        mdData = block.children;
-                        mdBody = block.body;
-                    }
-                }
-            }
+            const { body: mdBody, children: mdData } = this.getMarkDown(contract.path, contract.filename).filter(
+                (_md) => _md.title.includes(`# ${contract.name}`)
+            )[0] || {};
             const contractLink = this.getLink(contract.path, contract.data.contract.loc.start.line);
-            let MDContent = `# ${contract.name} ${contractLink}${this.lineBreak}`;
+            let MDContent = `# ${contractLink} ${contract.name}${this.lineBreak}`;
+
+            if (contract.data.contract?.natspec?.author) {
+                MDContent += `**Author** _${
+                    contract.data.contract.natspec.author.trim()
+                }_${
+                    this.lineBreak.repeat(2)
+                }`;
+            }
+
             if (mdBody) MDContent += `${mdBody.trim()}${this.lineBreak.repeat(2)}`;
+
             if (contract.data.contract !== undefined) {
                 if (contract.data.contract.natspec.dev) {
                     MDContent += `${this.fixNatSpec(contract.data.contract.natspec.dev)}${this.lineBreak.repeat(2)}`;
@@ -166,39 +140,30 @@ export class Generate {
                     MDContent += `${this.fixNatSpec(contract.data.contract.natspec.notice)}${this.lineBreak}`;
                 }
             }
+
             contract.data.functions.forEach((f) => {
+                MDContent += `---${this.lineBreak}`
                 const { start: { line }} = f.ast.loc;
                 const fnLink = this.getLink(contract.path, line);
-                const fnName = `\`${f.ast.name}(${f.parameters.map((p: any) => `${p.typeName.name} ${p.name}`).join(', ')})\``
-                MDContent += `## ${fnName} ${fnLink}${this.lineBreak.repeat(2)}`;
+                const fnName = this.functionName(f);
+                MDContent += `## ${fnLink} ${fnName}${this.lineBreak.repeat(2)}`;
                 const existingMD = mdData?.filter(
                     (m) => m.title.includes(fnName) || m.title == `## ${f.ast.name}`
                 )[0];
                 if (existingMD) MDContent += `${existingMD.body.trim()}${this.lineBreak.repeat(2)}`;
-                if (f.ast.natspec === null) {
-                    return;
-                }
+                if (f.ast.natspec === null) return;
                 if (f.ast.natspec.dev) {
-                    if (existingMD) {
-                        MDContent += `### Developer Notes${this.lineBreak.repeat(2)}`
-                    }
+                    if (existingMD) MDContent += `### Developer Notes${this.lineBreak.repeat(2)}`;
                     MDContent += `${this.fixNatSpec(f.ast.natspec.dev)}${this.lineBreak.repeat(2)}`;
                 }
                 if (f.ast.natspec.notice) {
+                    if (existingMD) MDContent += `### User Notes${this.lineBreak.repeat(2)}`
                     MDContent += `${this.fixNatSpec(f.ast.natspec.notice)}${this.lineBreak.repeat(2)}`;
                 }
                 if (f.parameters.length > 0) {
                     MDContent += `${this.lineBreak}### Parameters${this.lineBreak}`;
-                    f.parameters.forEach((p: any) => {
-                        MDContent += `* \`${p.name}\` ${p.natspec}${this.lineBreak}`;
-                    });
+                    f.parameters.map((p: any) => (MDContent += this.parameter(p)));
                 }
-                // if (f.parameters.length > 0) {
-                //     MDContent += `${this.lineBreak}### Parameters${this.lineBreak}`;
-                //     f.parameters.forEach((p: any) => {
-                //         MDContent += `* \`${p.typeName.name} ${p.name}\` ${p.natspec}${this.lineBreak}`;
-                //     });
-                // }
                 if (f.returnParameters !== null && f.returnParameters.length > 0) {
                     MDContent += `### Returns${this.lineBreak}`;
                     f.returnParameters.forEach((p: any) => {
@@ -207,7 +172,6 @@ export class Generate {
                 }
                 MDContent += this.lineBreak;
             });
-            // write it to a file
             fs.writeFileSync(
                 path.join(process.cwd(), this.outputPath, `${contract.filename}.md`),
                 MDContent,
@@ -215,58 +179,6 @@ export class Generate {
         });
     }
 
-    /**
-     * TODO: to write!
-     */
-    private renderReadme(original: boolean): void {
-        let outputReadme = '# Hello';
-        if (fs.existsSync(path.join(process.cwd(), 'README.md'))) {
-            outputReadme = fs.readFileSync(path.join(process.cwd(), 'README.md')).toString();
-        }
-        if (original) {
-            fs.writeFileSync(
-                path.join(process.cwd(), this.outputPath, 'README.md'),
-                outputReadme,
-            );
-        } else {
-            const templateContent = String(fs.readFileSync(
-                path.join(this.contracts[0].folder, this.htmlDefaultTemplatePath),
-            ));
-            const pureREADME = String(fs.readFileSync(path.join(process.cwd(), 'README.md'))).trim();
-            const projectName = JSON.parse(String(fs.readFileSync(path.join(process.cwd(), 'package.json')))).name as string;
-            const view = {
-                README: md.render(pureREADME),
-                contractsStructure: this.contracts,
-                folderStructure: JSON.stringify(this.inputPathStructure),
-                hasLICENSE: this.hasLICENSE,
-                projectName,
-            };
-            outputReadme = render(templateContent, view);
-            fs.writeFileSync(
-                path.join(process.cwd(), this.outputPath, 'index.html'),
-                outputReadme,
-            );
-        }
-        // if there's an image reference in readme, copy it
-        const files: string[] = [];
-        const filesList = fs.readdirSync(process.cwd());
-        filesList.forEach((file) => {
-            const stats = fs.lstatSync(path.join(process.cwd(), file));
-            if (stats.isFile() && (path.extname(file) === '.png' || path.extname(file) === '.jpg')) {
-                files.push(file);
-            }
-        });
-        // and if the file is a readme, copy it
-        files.forEach((file) => {
-            if (outputReadme.includes(file)) {
-                fs.copyFileSync(path.join(process.cwd(), file), path.join(process.cwd(), this.outputPath, file));
-            }
-        });
-    }
-
-    /**
-     * TODO: to write!
-     */
     private renderDocumentationIndex(
         content: string,
     ): string {

@@ -15,21 +15,23 @@ Usage
 
 Options
     --help, -h  To get help
-    --output -o The output type [html/pdf/gitbook/docsify] default: html
+    --output -o The output type [gitbook/docsify] default: gitbook
     --ignore -i An array of files to ignore
-    --tests -t Path to the tests folder. Default: ./test
-    --testsExtension -te Regex to filter test files. Default: \.(spec|test)\.[jt]s
     --baseLocation -bl Base location, used to render test files link. Default: repository url
 
 Examples
     $ soldoc docs/ contracts/Sample.sol
     $ soldoc docs/ contracts/
     $ soldoc --tests ./mytests docs/ Sample.sol
-    $ soldoc --output pdf docs/ Sample.sol
     $ soldoc --output gitbook --ignore Migrations.sol docs/ Sample.sol
 `;
-const defaultBaseLocation = JSON.parse(fs.readFileSync(
-    path.join(process.cwd(), 'package.json')).toString()).repository?.url.replace('git+', '') || process.cwd();
+
+const packagePath = path.join(process.cwd(), 'package.json');
+const defaultBaseLocation = (
+    fs.existsSync(packagePath) &&
+    JSON.parse(fs.readFileSync(packagePath).toString()).repository?.url?.replace('git+', '')
+) || process.cwd();
+
 const cli = meow(helpMessage, {
     flags: {
         baseLocation: {
@@ -43,19 +45,9 @@ const cli = meow(helpMessage, {
         },
         output: {
             alias: 'o',
-            default: 'html',
+            default: 'gitbook',
             type: 'string',
-        },
-        tests: {
-            alias: 't',
-            default: 'test',
-            type: 'string',
-        },
-        testsExtension: {
-            alias: 'te',
-            default: '\.(spec|test)\.[jt]s',
-            type: 'string',
-        },
+        }
     },
 });
 const terminalConsole = new Console(process.stdout, process.stderr);
@@ -69,10 +61,6 @@ const main = (): number => {
         return 1;
     }
 
-    // pdf generation is a bit slower
-    if (cli.flags.output === 'pdf') {
-        terminalConsole.log('Wait...pdf, might take a moment! 🐼️ is working on it...');
-    }
     let ignoreList: string[] = [];
     if (cli.flags.ignore && cli.flags.ignore.length > 0) {
         const commaPosition = cli.flags.ignore.indexOf(',');
@@ -85,8 +73,6 @@ const main = (): number => {
         ignoreList,
         String(cli.input[0]),
         String(cli.input[1]),
-        cli.flags.tests,
-        cli.flags.testsExtension,
         cli.flags.baseLocation
     );
 };

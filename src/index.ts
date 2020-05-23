@@ -6,6 +6,7 @@ import { Generate } from './generate';
 
 const terminalConsole = new Console(process.stdout, process.stderr);
 
+
 /**
  * Get all files in folder, recursively.
  * @param {string} folder folder path
@@ -37,8 +38,6 @@ function deepListFiles(folder: string, ignoreFilesList: string[]): string[] {
  * @param {string} ignoreFilesList an array of files to be ignored
  * @param {string} outputFolder directory to output the result, either pdf or html
  * @param {string} inputPath the path to file or folder to be analized
- * @param {string} testsPath the path to the tests location
- * @param {string} testsExtension the test files extension
  * @param {string} baseLocation the project's base location
  */
 export function generate(
@@ -46,8 +45,6 @@ export function generate(
     ignoreFilesList: string[],
     outputFolder: string,
     inputPath: string,
-    testsPath: string,
-    testsExtension: string,
     baseLocation: string,
 ): number {
     let stats;
@@ -74,14 +71,10 @@ export function generate(
         ignoreFilesList,
         inputPath,
         outputFolder,
-        testsPath,
-        testsExtension,
         baseLocation,
     );
     if (outputType === 'gitbook') {
         generateClass.gitbook();
-    } else if (outputType === 'docsify') {
-        generateClass.docsify();
     } else {
         terminalConsole.error('Invalid output type! Try --help for more info.');
         return 1;

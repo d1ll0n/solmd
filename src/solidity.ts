@@ -1,7 +1,6 @@
 import fs from 'fs';
 import path from 'path';
 import parser from '@hq20/solidity-parser-antlr';
-import { IMethodTestComment } from './tests';
 
 
 export interface ISolDocAST {
@@ -76,10 +75,8 @@ function extendsStateMutability(node: any): { payable: boolean; pure: boolean; v
  */
 export function parseSingleSolidityFile(
     solidityFilePath: string,
-    testComments: Map<string, IMethodTestComment[]>,
     baseLocation: string
 ): IObjectViewData {
-    console.log(`PATH: ${solidityFilePath}`)
     const folder = path.join(__dirname, '../');
     const input = fs.readFileSync(solidityFilePath).toString();
     const ast = parser.parse(input, { loc: true });
@@ -96,7 +93,6 @@ export function parseSingleSolidityFile(
         ContractDefinition: (node: any) => {
             data = {
                 contract: node,
-                testFile: testComments.get(node.name)?.filter((commentsTestNode) => commentsTestNode.name === '#'),
                 ...data,
             };
             currentContractName = node.name;
@@ -121,18 +117,13 @@ export function parseSingleSolidityFile(
                         ...data,
                     };
                 } else {
-                    const tests = testComments.get(currentContractName)?.filter(
-                        (commentsTestNode) => commentsTestNode.name === node.name
-                    ).map((commentsTestNode) => commentsTestNode = {
-                        ...commentsTestNode, filePath: path.join(baseLocation, commentsTestNode.filePath),
-                    });
                     data.functions.push({
                         ast: node,
-                        hasTests: tests !== undefined,
+                        hasTests: false,
                         parameters: extendParamsAstWithNatspec(node),
                         returnParameters: extendReturnParamsAstWithNatspec(node),
                         stateMutability: extendsStateMutability(node),
-                        tests,
+                        tests: undefined,
                         visibility: extendsVisibility(node),
                     });
                 }

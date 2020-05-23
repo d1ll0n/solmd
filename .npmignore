@@ -1,0 +1,6 @@
+.github/
+node_modules/
+src/
+test/
+CONTRIBUTING.md
+CODE_OF_CONDUCT.md
