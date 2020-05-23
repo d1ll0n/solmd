@@ -29,7 +29,7 @@ Examples
     $ soldoc --output gitbook --ignore Migrations.sol docs/ Sample.sol
 `;
 const defaultBaseLocation = JSON.parse(fs.readFileSync(
-    path.join(process.cwd(), 'package.json')).toString()).repository?.url.replace('git+', '');
+    path.join(process.cwd(), 'package.json')).toString()).repository?.url.replace('git+', '') || process.cwd();
 const cli = meow(helpMessage, {
     flags: {
         baseLocation: {
