@@ -11,7 +11,7 @@ const helpMessage = `
 🐼️ .- hello friend, here's what I have. Thanks to use soldoc.
 
 Usage
-    $ soldoc [options] <output-folder> <file(s)>
+    $ soldocgen [options] <output-folder> <file(s)>
 
 Options
     --help, -h  To get help
@@ -20,10 +20,10 @@ Options
     --baseLocation -bl Base location, used to render test files link. Default: repository url
 
 Examples
-    $ soldoc docs/ contracts/Sample.sol
-    $ soldoc docs/ contracts/
-    $ soldoc --tests ./mytests docs/ Sample.sol
-    $ soldoc --output gitbook --ignore Migrations.sol docs/ Sample.sol
+    $ soldocgen docs/ contracts/Sample.sol
+    $ soldocgen docs/ contracts/
+    $ soldocgen --tests ./mytests docs/ Sample.sol
+    $ soldocgen --output gitbook --ignore Migrations.sol docs/ Sample.sol
 `;
 
 const packagePath = path.join(process.cwd(), 'package.json');
