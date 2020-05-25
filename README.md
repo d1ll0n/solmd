@@ -20,6 +20,9 @@ Solidity File
 ```
 // Contract.sol
 
+/**
+ * @dev Notes about the contract.
+ */
 contract Contract
   /**
    * @dev Comments from natspec
@@ -34,6 +37,7 @@ Markdown Input
 // Contract.md
 
 # Contract
+Additional notes about the contract.
 
 ## test
 Comments from markdown file.
@@ -43,6 +47,9 @@ Output File
 ```md
 // Contract.md
 # Contract
+Additional notes about the contract.
+
+Notes about the contract.
 
 # Functions
 ## test()
