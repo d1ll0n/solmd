@@ -1,6 +1,6 @@
 {
     "name": "soldocgen",
-    "version": "0.0.2",
+    "version": "0.0.3",
     "description": "Solidity documentation generator.",
     "main": "dist/index.js",
     "bin": {
