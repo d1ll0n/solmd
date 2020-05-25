@@ -37,7 +37,7 @@ export class Generate {
     private getLink(_path: string, line?: number): string {
         if (_path.startsWith('.')) _path = _path.slice(1);
         const url = line ? `${_path}#L${line}` : _path;
-        return `[🔗](${url})`
+        return `[🔗](/${url})`
     }
 
     public gitbook(): void {
@@ -49,7 +49,7 @@ export class Generate {
         );
         // create summary file
         fs.writeFileSync(
-            path.join(process.cwd(), this.outputPath, 'SUMMARY.md'),
+            path.join(process.cwd(), this.outputPath, 'README.md'),
             SUMMARYContent,
         );
     }
@@ -213,19 +213,43 @@ export class Generate {
     private renderDocumentationIndex(
         content: string,
     ): string {
-        let documentationIndexContent = content;
+        let documentationIndexContent = '';
         if (this.hasLICENSE) {
-            documentationIndexContent += `\t* [LICENSE](LICENSE.md)${this.lineBreak}`;
+            documentationIndexContent += content;
+            documentationIndexContent += `\t - [LICENSE](LICENSE.md)${this.lineBreak}`;
             fs.copyFileSync(
                 path.join(process.cwd(), 'LICENSE'),
                 path.join(process.cwd(), this.outputPath, 'LICENSE.md'),
             );
         }
-        documentationIndexContent += `* CONTRACTS${this.lineBreak}`;
-        this.contracts.forEach((s) => {
-            const contractPath = path.join(s.folder, s.name, '.md')
-            documentationIndexContent += `\t* [${s.name}](${contractPath})${this.lineBreak}`;
-        });
+        documentationIndexContent += `- CONTRACTS${this.lineBreak}`;
+        const folders: { [key: string]: string[] } = {};
+        const base: string[] = [];
+        for (const c of this.contracts) {
+            if (c.folder) {
+                if (!folders[c.folder]) folders[c.folder] = [];
+                const contractPath = path.join(c.folder, c.name);
+                folders[c.folder].push(`[${c.name}](./${contractPath}.md)`);
+                folders[c.folder].sort();
+            } else {
+                base.push(`[${c.name}](./${c.name}.md)`);
+            }
+        }
+        for (const link of base) {
+            documentationIndexContent += `\t - ${link}${this.lineBreak}`
+        }
+        const folderKeys = Object.keys(folders).sort();
+        for (const folder of folderKeys) {
+            documentationIndexContent += `\t - ${folder}${this.lineBreak}`;
+            for (const link of folders[folder]) {
+                documentationIndexContent += `\t \t - ${link}${this.lineBreak}`;
+            }
+        }
+        // // const 
+        // this.contracts.forEach((s) => {
+        //     const contractPath = path.join(s.folder, s.name)
+        //     documentationIndexContent += `\t * [${s.name}](./${contractPath}.md)${this.lineBreak}`;
+        // });
         return documentationIndexContent;
     }
 }
