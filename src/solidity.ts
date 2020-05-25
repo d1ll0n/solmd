@@ -51,6 +51,16 @@ function extendReturnParamsAstWithNatspec(node: any): null | [any] {
             }
         ));
 }
+function extendStructParamsAstWithNatspec(node: any): null | [any] {
+    if (node.members === null) return null;
+    return node.members.map((m: any) => {
+        if (node.natspec && node.natspec.params) {
+            const match: any = node.natspec.params[m.name];
+            if (match) m.natspec = match;
+        }
+        return m;
+    })
+}
 
 function extendsVisibility(node: any): { external: boolean; internal: boolean; private: boolean; public: boolean } {
     return {
@@ -75,9 +85,12 @@ function extendsStateMutability(node: any): { payable: boolean; pure: boolean; v
  */
 export function parseSingleSolidityFile(
     solidityFilePath: string,
-    baseLocation: string
+    inputPath: string
 ): IObjectViewData {
-    const folder = path.join(__dirname, '../');
+    // const folder = path.join(__dirname, '../');
+    // console.log(solidityFilePath)
+    // console.log(inputPath)
+    // console.log(path.relative(inputPath, solidityFilePath))
     const input = fs.readFileSync(solidityFilePath).toString();
     const ast = parser.parse(input, { loc: true });
     let data: ISolDocAST = {
@@ -150,9 +163,17 @@ export function parseSingleSolidityFile(
                 visibility: extendsVisibility(node),
             });
         },
+        StructDefinition: (node: any) => {
+            data.structs.push({
+                ast: node,
+                parameters: extendStructParamsAstWithNatspec(node)
+            })
+        }
     });
     const name = ast.children.filter((child: any) => child.type === 'ContractDefinition')[0].name;
+    const relativePath = path.relative(inputPath, solidityFilePath);
     const filename = path.parse(solidityFilePath).name;
+    const folder = relativePath.replace(filename, '').replace('.sol', '');
     return {
         data,
         filename,

@@ -28,7 +28,7 @@ export class Generate {
         outputPath: string,
         baseLocation: string
     ) {
-        files.forEach((file) => this.contracts.push(parseSingleSolidityFile(file, baseLocation)));
+        files.forEach((file) => this.contracts.push(parseSingleSolidityFile(file, inputPath)));
         this.outputPath = outputPath;
         this.inputPathStructure = dirTree(inputPath, { exclude: exclude.map((i) => new RegExp(i)) });
         this.hasLICENSE = fs.existsSync(path.join(process.cwd(), 'LICENSE'));
@@ -96,7 +96,7 @@ export class Generate {
                 f.ast.name,
                 '(',
                 f.parameters.map(
-                    (p: any) => `${p.typeName.name} ${p.name}`
+                    (p: any) => `${p.typeName.name || p.typeName.namePath} ${p.name}`
                 ).join(', '),
                 ')',
                 // (_returns ? ` -> (${_returns.join(', ')})` : ''),
@@ -110,7 +110,16 @@ export class Generate {
         if (this.useFullFunctionSignature) {
             return `* \`${p.name}\` ${p.natspec}${this.lineBreak}`;
         }
-        return `* \`${p.typeName.name} ${p.name}\` ${p.natspec}${this.lineBreak}`;
+        return `* \`${p.typeName.name || p.typeName.namePath} ${p.name}\` ${p.natspec}${this.lineBreak}`;
+    }
+
+    private makeDirectoryStructure(folder: string) {
+        const subDirs = folder.split('/').filter(x => x);
+        subDirs.reduce((curPath: string, nextSubDir: string) => {
+            const relPath = path.join(curPath, nextSubDir);
+            if (!fs.existsSync(relPath)) fs.mkdirSync(relPath);
+            return relPath;
+        }, path.join(process.cwd(), this.outputPath));
     }
 
     private renderContracts(): void {
@@ -133,16 +142,35 @@ export class Generate {
             if (mdBody) MDContent += `${mdBody.trim()}${this.lineBreak.repeat(2)}`;
 
             if (contract.data.contract !== undefined) {
-                if (contract.data.contract.natspec.dev) {
+                if (contract.data.contract.natspec?.dev) {
                     MDContent += `${this.fixNatSpec(contract.data.contract.natspec.dev)}${this.lineBreak.repeat(2)}`;
                 }
-                if (contract.data.contract.natspec.notice) {
+                if (contract.data.contract.natspec?.notice) {
                     MDContent += `${this.fixNatSpec(contract.data.contract.natspec.notice)}${this.lineBreak}`;
                 }
             }
+            if (contract.data.structs.length) {
+                MDContent += `# Data Structures${this.lineBreak}`
+            }
+            contract.data.structs.forEach((d) => {
+                const { start: { line }} = d.ast.loc;
+                const link = this.getLink(contract.path, line);
+                const name = d.ast.name;
+                MDContent += `## ${link} ${name}${this.lineBreak}`;
+                if (d.natspec && d.natspec.dev) MDContent += `${d.natspec.dev}${this.lineBreak}`;
+                MDContent += `### Properties${this.lineBreak}`;
+                d.parameters.forEach((m: any) => {
+                    const mType = m.typeName.name || m.typeName.namePath;
+                    const mName = m.name;
+                    const devdoc = m.natspec;
+                    MDContent += `- \`${mType} ${mName}\`${devdoc ? ` - ${devdoc}` : ''}${this.lineBreak}`
+                });
 
+            })
+            if (contract.data.functions.length) {
+                MDContent += `# Functions${this.lineBreak}`;
+            }
             contract.data.functions.forEach((f) => {
-                MDContent += `---${this.lineBreak}`
                 const { start: { line }} = f.ast.loc;
                 const fnLink = this.getLink(contract.path, line);
                 const fnName = this.functionName(f);
@@ -167,13 +195,16 @@ export class Generate {
                 if (f.returnParameters !== null && f.returnParameters.length > 0) {
                     MDContent += `### Returns${this.lineBreak}`;
                     f.returnParameters.forEach((p: any) => {
-                        MDContent += `* \`${p.typeName.name}${p.name ? ` ${p.name}` : ''}\`${p.natspec ? ` ${p.natspec}` : ''}${this.lineBreak}`;
+                        MDContent += `* \`${p.typeName.name || p.typeName.namePath}${p.name ? ` ${p.name}` : ''}\`${p.natspec ? ` ${p.natspec}` : ''}${this.lineBreak}`;
                     });
                 }
                 MDContent += this.lineBreak;
             });
+            // const outputDir = path.join(process.cwd(), this.outputPath, contract.folder);
+            // if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir);
+            this.makeDirectoryStructure(contract.folder);
             fs.writeFileSync(
-                path.join(process.cwd(), this.outputPath, `${contract.filename}.md`),
+                path.join(process.cwd(), this.outputPath, contract.folder, `${contract.filename}.md`),
                 MDContent,
             );
         });
@@ -192,7 +223,8 @@ export class Generate {
         }
         documentationIndexContent += `* CONTRACTS${this.lineBreak}`;
         this.contracts.forEach((s) => {
-            documentationIndexContent += `\t* [${s.name}](${s.name}.md)${this.lineBreak}`;
+            const contractPath = path.join(s.folder, s.name, '.md')
+            documentationIndexContent += `\t* [${s.name}](${contractPath})${this.lineBreak}`;
         });
         return documentationIndexContent;
     }
