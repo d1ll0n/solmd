@@ -43,9 +43,9 @@
     "author": "HQ20",
     "license": "GPL-3.0-only",
     "bugs": {
-        "url": "https://github.com/d1llon/soldocgen/issues"
+        "url": "https://github.com/d1ll0n/soldocgen/issues"
     },
-    "homepage": "https://github.com/d1llon/soldocgen#readme",
+    "homepage": "https://github.com/d1ll0n/soldocgen#readme",
     
     "dependencies": {
         "@hq20/solidity-parser-antlr": "0.4.12-alpha.0",
