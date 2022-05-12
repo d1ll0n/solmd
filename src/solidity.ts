@@ -45,9 +45,11 @@ function extendReturnParamsAstWithNatspec(node: any): null | [any] {
         (parameter: any) => (
             {
                 ...parameter,
-                natspec: node.natspec === null
+                natspec: node.natspec === null ||
+                  node.natspec.return === undefined ||
+                  parameter.name === null
                     ? ''
-                    : node.natspec.return,
+                    : node.natspec.return[parameter.name],
             }
         ));
 }
