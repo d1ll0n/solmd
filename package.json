@@ -1,6 +1,6 @@
 {
   "name": "@mitche50/soldocgen",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "Solidity documentation generator.",
   "main": "dist/index.js",
   "bin": {
@@ -47,7 +47,7 @@
   },
   "homepage": "https://github.com/d1ll0n/soldocgen#readme",
   "dependencies": {
-    "@mitche50/solidity-parser-antlr": "0.4.12-alpha.0",
+    "@mitche50/solidity-parser-antlr": "0.4.11-alpha.0",
     "directory-tree": "2.2.4",
     "meow": "7.0.1"
   },
