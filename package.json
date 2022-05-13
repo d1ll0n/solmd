@@ -1,6 +1,6 @@
 {
   "name": "@mitche50/soldocgen",
-  "version": "0.0.6",
+  "version": "0.0.8",
   "description": "Solidity documentation generator.",
   "main": "dist/index.js",
   "bin": {
@@ -26,7 +26,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/d1ll0n/soldocgen.git"
+    "url": "git+https://github.com/mitche50/soldocgen.git"
   },
   "keywords": [
     "solidity",
@@ -43,9 +43,9 @@
   "author": "HQ20",
   "license": "GPL-3.0-only",
   "bugs": {
-    "url": "https://github.com/d1ll0n/soldocgen/issues"
+    "url": "https://github.com/mitche50/soldocgen/issues"
   },
-  "homepage": "https://github.com/d1ll0n/soldocgen#readme",
+  "homepage": "https://github.com/mitche50/soldocgen#readme",
   "dependencies": {
     "@mitche50/solidity-parser-antlr": "0.4.11-alpha.0",
     "directory-tree": "2.2.4",
