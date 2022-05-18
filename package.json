@@ -1,71 +1,73 @@
 {
-    "name": "soldocgen",
-    "version": "0.0.3",
-    "description": "Solidity documentation generator.",
-    "main": "dist/index.js",
-    "bin": {
-        "soldocgen": "dist/cli.js"
-    },
-    "files": [
-        "/dist/**/*.js",
-        "/dist/**/*.d.ts",
-        "/dist/**/*.html"
-    ],
-    "scripts": {
-        "preversion": "yarn",
-        "lint": "eslint \"src/**/*.ts\"",
-        "build": "tsc && chmod u+x dist/cli.js",
-        "pretest": "yarn build",
-        "test": "jest --testTimeout=40000",
-        "build:watch": "tsc -w && chmod u+x dist/cli.js",
-        "test:watch": "jest --testTimeout=40000 --watchAll",
-        "coverage": "jest --coverage --testTimeout=40000",
-        "precoverage:ci": "yarn build",
-        "coverage:ci": "jest --coverage --testTimeout=40000 --detectOpenHandles --forceExit && cat ./coverage/lcov.info | coveralls",
-        "docs": "typedoc --out docs src"
-    },
-    "repository": {
-        "type": "git",
-        "url": "git+https://github.com/d1ll0n/soldocgen.git"
-    },
-    "keywords": [
-        "solidity",
-        "solidity-contracts",
-        "solidity-documentation",
-        "documentation",
-        "document",
-        "documentation-tool",
-        "smart-contracts",
-        "html",
-        "pdf",
-        "pdf-generation"
-    ],
-    "author": "HQ20",
-    "license": "GPL-3.0-only",
-    "bugs": {
-        "url": "https://github.com/d1ll0n/soldocgen/issues"
-    },
-    "homepage": "https://github.com/d1ll0n/soldocgen#readme",
-    
-    "dependencies": {
-        "@hq20/solidity-parser-antlr": "0.4.12-alpha.0",
-        "directory-tree": "2.2.4",
-        "meow": "7.0.1"
-    },
-    "devDependencies": {
-        "@types/jest": "25.2.3",
-        "@types/meow": "5.0.0",
-        "@types/node": "14.0.5",
-        "@typescript-eslint/eslint-plugin": "2.34.0",
-        "@typescript-eslint/eslint-plugin-tslint": "3.0.0",
-        "@typescript-eslint/parser": "2.34.0",
-        "coveralls": "3.1.0",
-        "eslint": "6.8.0",
-        "eslint-plugin-import": "2.20.2",
-        "expect.js": "0.3.1",
-        "jest": "26.0.1",
-        "tslint": "^6.0.0",
-        "typedoc": "0.17.7",
-        "typescript": "3.9.3"
-    }
+  "name": "@mitche50/soldocgen",
+  "version": "0.0.8",
+  "description": "Solidity documentation generator.",
+  "main": "dist/index.js",
+  "bin": {
+    "soldocgen": "dist/cli.js"
+  },
+  "files": [
+    "/dist/**/*.js",
+    "/dist/**/*.d.ts",
+    "/dist/**/*.html"
+  ],
+  "scripts": {
+    "preversion": "yarn",
+    "lint": "eslint \"src/**/*.ts\"",
+    "build": "tsc && chmod u+x dist/cli.js",
+    "pretest": "yarn build",
+    "test": "jest --testTimeout=40000",
+    "build:watch": "tsc -w && chmod u+x dist/cli.js",
+    "test:watch": "jest --testTimeout=40000 --watchAll",
+    "coverage": "jest --coverage --testTimeout=40000",
+    "precoverage:ci": "yarn build",
+    "coverage:ci": "jest --coverage --testTimeout=40000 --detectOpenHandles --forceExit && cat ./coverage/lcov.info | coveralls",
+    "docs": "typedoc --out docs src"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mitche50/soldocgen.git"
+  },
+  "keywords": [
+    "solidity",
+    "solidity-contracts",
+    "solidity-documentation",
+    "documentation",
+    "document",
+    "documentation-tool",
+    "smart-contracts",
+    "html",
+    "pdf",
+    "pdf-generation"
+  ],
+  "author": "HQ20",
+  "license": "GPL-3.0-only",
+  "bugs": {
+    "url": "https://github.com/mitche50/soldocgen/issues"
+  },
+  "homepage": "https://github.com/mitche50/soldocgen#readme",
+  "dependencies": {
+    "@mitche50/solidity-parser-antlr": "0.4.11-alpha.0",
+    "directory-tree": "2.2.4",
+    "meow": "7.0.1"
+  },
+  "devDependencies": {
+    "@types/jest": "25.2.3",
+    "@types/meow": "5.0.0",
+    "@types/node": "14.0.5",
+    "@typescript-eslint/eslint-plugin": "2.34.0",
+    "@typescript-eslint/eslint-plugin-tslint": "3.0.0",
+    "@typescript-eslint/parser": "2.34.0",
+    "coveralls": "3.1.0",
+    "eslint": "6.8.0",
+    "eslint-plugin-import": "2.20.2",
+    "expect.js": "0.3.1",
+    "jest": "26.0.1",
+    "tslint": "^6.0.0",
+    "typedoc": "0.17.7",
+    "typescript": "3.9.3"
+  },
+  "directories": {
+    "test": "test"
+  }
 }

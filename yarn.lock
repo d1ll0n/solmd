@@ -265,11 +265,6 @@
     exec-sh "^0.3.2"
     minimist "^1.2.0"
 
-"@hq20/solidity-parser-antlr@0.4.12-alpha.0":
-  version "0.4.12-alpha.0"
-  resolved "https://registry.yarnpkg.com/@hq20/solidity-parser-antlr/-/solidity-parser-antlr-0.4.12-alpha.0.tgz#4def513caf8c5e76870ad0cd51d301faf0fb7747"
-  integrity sha512-LHyLMFgAJi5U4eakqqUvtpxxIv3AA4QDJbv6//xYgiRqQsTY8BoUayqU82f8dHcZJ44Y6H+yzml/vszEPUOe4g==
-
 "@istanbuljs/load-nyc-config@^1.0.0":
   version "1.1.0"
   resolved "https://registry.yarnpkg.com/@istanbuljs/load-nyc-config/-/load-nyc-config-1.1.0.tgz#fd3db1d59ecf7cf121e80650bb86712f9b55eced"
@@ -461,6 +456,11 @@
     "@types/istanbul-reports" "^1.1.1"
     "@types/yargs" "^15.0.0"
     chalk "^4.0.0"
+
+"@mitche50/solidity-parser-antlr@0.4.11-alpha.0":
+  version "0.4.11-alpha.0"
+  resolved "https://registry.yarnpkg.com/@mitche50/solidity-parser-antlr/-/solidity-parser-antlr-0.4.11-alpha.0.tgz#bbcd433f7b0eba1debc2974a2bc0ad8445039c1e"
+  integrity sha512-U1zT3YAe5JKMTau2HtHGkPn71HwuNszJZuCJl3sF70HBw2JEuVL4dAicpZ0p5iWyYjTjI7Rk+RVZAmozlyqY8g==
 
 "@sinonjs/commons@^1.7.0":
   version "1.8.0"

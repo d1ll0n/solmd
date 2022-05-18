@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import parser from '@hq20/solidity-parser-antlr';
+import parser from '@mitche50/solidity-parser-antlr';
 
 
 export interface ISolDocAST {
@@ -45,9 +45,11 @@ function extendReturnParamsAstWithNatspec(node: any): null | [any] {
         (parameter: any) => (
             {
                 ...parameter,
-                natspec: node.natspec === null
+                natspec: node.natspec === null ||
+                  node.natspec.return === undefined ||
+                  parameter.name === null
                     ? ''
-                    : node.natspec.return,
+                    : node.natspec.return[parameter.name],
             }
         ));
 }
